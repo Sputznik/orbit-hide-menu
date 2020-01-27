@@ -7,197 +7,167 @@
     Version: 1.0
     Author URI: http://sputznik.com
     */
-	
+
 	class ORBIT_HIDE_MENU{
-		
+
 		var $menu;
 		var $submenu;
-		
+
 		function __construct(){
-			
+
+			add_action('admin_menu', function(){
+				add_submenu_page(
+					'options-general.php',
+					'Hide Menus',
+					'Hide Menus',
+					'manage_options',
+					'hide-menus',
+					array( $this, 'settings_page' )
+				);
+			});
+
 			/* SHOW EXTRA FIELDS */
 			add_action( 'show_user_profile', array( $this, 'extra_user_profile_fields' ) );
 			add_action( 'edit_user_profile', array( $this, 'extra_user_profile_fields' ) );
-			
+
 			/* SAVE EXTRA FIELDS */
 			add_action( 'personal_options_update', array( $this, 'save_extra_user_profile_fields' ) );
 			add_action( 'edit_user_profile_update', array( $this, 'save_extra_user_profile_fields' ) );
-			
+
 			/* HIDE MENU ITEMS */
 			add_action( 'admin_init', array( $this, 'hide_menu_items' ) );
-			
+
 		}
-		
-		function hide_menu_items(){
-			global $menu, $submenu;
-				
-			/* SAVING THE OLD MENU FOR REUE IN THE USER FIELDS */
-			$this->menu = $menu;
-			$this->submenu = $submenu;
-				
-			$current_user = wp_get_current_user();
-				
-			/* IF NOT LOGGED IN THEN RETURN */
-			if( !isset( $current_user->ID ) ) return false;
-				
-			/* SELECTED MENU ITEMS FOR HIDING */
-			$menu_arr = is_array( get_user_meta( $current_user->ID, 'user_menu', true ) ) ? get_user_meta( $current_user->ID, 'user_menu', true ) : array();
-			$submenu_arr = is_array( get_user_meta( $current_user->ID, 'user_submenu', true ) ) ? get_user_meta( $current_user->ID, 'user_submenu', true ) : array();
-				
-			/* FINALLY HIDE MENU PAGES */
-			foreach( $menu_arr as $menu_item ){ remove_menu_page( $menu_item ); }
-			
-			//print_r( $submenu_arr );
-			
-			
-			/* FINALLY HIDE SUBMENU PAGES */
-			foreach( $submenu_arr as $submenu_item ){ 
+
+		function settings_page(){
+			include( plugin_dir_path(__FILE__).'templates/settings.php' );
+		}
+
+		function display_menu_items( $user_id_or_role ){
+			include( plugin_dir_path(__FILE__).'templates/menu-items.php' );
+		}
+
+		function hide_mainmenu( $menus ){ foreach( $menus as $menu_item ){ remove_menu_page( $menu_item ); } }
+		function hide_submenu( $submenus ){
+			foreach( $submenus as $submenu_item ){
 				$submenu_item = explode(':', $submenu_item );
 				if( count( $submenu_item ) > 1 ){
 					remove_submenu_page( $submenu_item[0], $submenu_item[1] );
 				}
-				
-				
 			}
-			
-			//wp_die();
 		}
-		
-		function list_menu_item( $user, $menu, $main_menu = false){
-			
-			$list_class = 'hide-menu-items';
-			$list_item_class = 'hide-menu-item';
-			$checkbox_class = 'menu-checkbox';
-			$form_name = 'user_menu[]';
-			$selected_menu = is_array( get_user_meta( $user->ID, 'user_menu', true ) ) ? get_user_meta( $user->ID, 'user_menu', true ) : array();
-			
-			if( $main_menu ){
+
+		function hide_menu_items(){
+			global $menu, $submenu;
+
+			/* SAVING THE OLD MENU FOR REUE IN THE USER FIELDS */
+			$this->menu = $menu;
+			$this->submenu = $submenu;
+
+			$current_user = wp_get_current_user();
+			$role = isset( $current_user->roles ) && count( $current_user->roles ) ? $current_user->roles[0] : false;
+
+			/* IF NOT LOGGED IN THEN RETURN */
+			if( !isset( $current_user->ID ) ) return false;
+
+			/* SELECTED MENU ITEMS FOR HIDING */
+			$menu_arr = is_array( get_user_meta( $current_user->ID, 'user_menu', true ) ) ? get_user_meta( $current_user->ID, 'user_menu', true ) : array();
+			if( $role ){
+				$menu_arr1 = $this->get_selected_menu_for_role( $role );
+				$menu_arr = array_unique( array_merge( $menu_arr, $menu_arr1 ) );
+			}
+			$this->hide_mainmenu( $menu_arr );
+
+			$submenu_arr = is_array( get_user_meta( $current_user->ID, 'user_submenu', true ) ) ? get_user_meta( $current_user->ID, 'user_submenu', true ) : array();
+			if( $role ){
+				$submenu_arr1 = $this->get_selected_menu_for_role( $role, true );
+				$submenu_arr = array_unique( array_merge( $submenu_arr, $submenu_arr1 ) );
+			}
+			$this->hide_submenu( $submenu_arr );
+
+
+			//wp_die();
+
+		}
+
+		function get_option(){
+			$options = get_option( 'hide_menu_settings' );
+			return $options;
+		}
+
+		function get_selected_menu_for_role( $role, $submenu = false ){
+			$menu = 'menu';
+			if( $submenu ){ $menu = 'submenu'; }
+
+			$settings = $this->get_option();
+			$settings = is_array( $settings ) ? $settings : array();
+
+			if( isset( $settings[$role] ) && isset( $settings[$role][$menu] ) ) return $settings[$role][$menu];
+			return array();
+		}
+
+		function update_selected_menu_for_role( $role, $selected_menu, $selected_submenu ){
+			$settings = $this->get_option();
+			$settings = is_array( $settings ) ? $settings : array();
+			$settings[$role] = array(
+				'menu'		=> $selected_menu,
+				'submenu'	=> $selected_submenu
+			);
+			update_option( 'hide_menu_settings', $settings );
+		}
+
+		function list_menu( $menu, $user_id_or_role, $submenu = false ){
+
+			$list_class 			= 'hide-menu-items';
+			$list_item_class 	= 'hide-menu-item';
+			$checkbox_class 	= 'menu-checkbox';
+			$form_name 				= 'user_menu[]';
+
+			if( is_int( $user_id_or_role ) ){
+				$selected_menu 		= is_array( get_user_meta( $user_id_or_role, 'user_menu', true ) ) ? get_user_meta( $user_id_or_role, 'user_menu', true ) : array();
+			}
+			else{
+				$selected_menu 		= $this->get_selected_menu_for_role( $user_id_or_role );
+			}
+
+			if( $submenu ){
 				$form_name = 'user_submenu[]';
 				$list_class = 'hide-submenu-items';
 				$list_item_class = 'hide-submenu-item';
 				$checkbox_class = 'submenu-checkbox';
-				$selected_menu = is_array( get_user_meta( $user->ID, 'user_submenu', true ) ) ? get_user_meta( $user->ID, 'user_submenu', true ) : array();
+				if( is_int( $user_id_or_role ) ){
+					$selected_menu 		= is_array( get_user_meta( $user_id_or_role, 'user_submenu', true ) ) ? get_user_meta( $user_id_or_role, 'user_submenu', true ) : array();
+				}
+				else{
+					$selected_menu 		= $this->get_selected_menu_for_role( $user_id_or_role, true );
+				}
 			}
-			
-			
-			
+
 			_e("<ul class='".$list_class."'>");
-			foreach( $menu as $menu_item ): if( isset( $menu_item[0] ) && $menu_item[0] && isset( $menu_item[2] ) && $menu_item[2] ):
-				
-		?>
-			
-			<li class="<?php _e( $list_item_class );?>">
-				<label>
-					<?php
-						$menu_val = $menu_item[2];
-						if( $main_menu ){
-							$menu_val = $main_menu.":".$menu_item[2];
-						}
-					?>
-					<input class="<?php _e( $checkbox_class );?>" <?php if( in_array( $menu_val, $selected_menu ) )_e("checked='checked'");?> type="checkbox" name="<?php _e( $form_name );?>" value="<?php echo $menu_val; ?>" />
-					<?php 
-						_e( $menu_item[0] );
-						if( !$main_menu && isset( $this->submenu[ $menu_item[2] ] ) && $this->submenu[ $menu_item[2] ] ){
-							$this->list_menu_item( $user, $this->submenu[ $menu_item[2] ], $menu_item[2] );
-						}
-					?>
-				</label>
-			</li>
-		<?php
-			
-			endif;endforeach;
+			foreach( $menu as $menu_item ){
+				if( isset( $menu_item[0] ) && $menu_item[0] && isset( $menu_item[2] ) && $menu_item[2] ){
+					include( plugin_dir_path(__FILE__).'templates/menu-item.php' );
+				}
+			}
+
 			_e("</ul>");
+
 		}
-		
-		function extra_user_profile_fields( $user ) { 
-			
-		?>
-			<h3><?php _e("Hide Menu Items"); ?></h3>
-			<table class="form-table">
-				<tr>
-					<td>
-						<label>
-							<input type="checkbox" data-behaviour='toggle-menu-items' />
-							Hide All
-						</label>
-					</td>
-				</tr>
-				<!-- MAIN MENU ITEMS -->
-				<tr><td><?php $this->list_menu_item( $user, $this->menu );?></td></tr>
-				<!-- END OF MAIN MENU ITEMS -->
-			</table>
-			<style>
-				ul.hide-menu-items{
-					display: grid;
-					grid-template-columns: 1fr 1fr 1fr;
-					grid-gap: 20px;
-				}
-				
-				ul.hide-submenu-items{
-					padding-top: 10px;
-					padding-left: 20px;
-						
-				}
-				.hide-menu-items .update-count, .hide-menu-items .plugin-count, .hide-menu-items .pending-count{ display:none; }
-				
-				
-			</style>
-			<script>
-				jQuery(document).ready( function(){
-					
-					jQuery('.menu-checkbox').each( function(){
-						
-						var el = jQuery( this );
-						
-						el.check_to_hide_submenu = function(){
-							// MAIN MENU LIST
-							var list = el.closest('li');
-							
-							if( el.is(':checked') ){
-								list.find('ul.hide-submenu-items').hide();
-							}
-							else{
-								list.find('ul.hide-submenu-items').show();
-							}	
-						};
-						
-						el.click( function(){
-							el.check_to_hide_submenu();
-						});
-						
-						el.check_to_hide_submenu();
-						
-					});
-					
-					jQuery('[data-behaviour~=toggle-menu-items]').each( function(){
-						
-						var el = jQuery( this );
-						
-						el.click(function(){
-							
-							if( el.is(':checked') ){
-								jQuery('.menu-checkbox:not(:checked)').click();	
-							}
-							else{
-								jQuery('.menu-checkbox').click();	
-							}
-							
-						});
-						
-					});
-				});
-			</script>
-		<?php }
-		
+
+		function extra_user_profile_fields( $user ) {
+			_e( "<h3>Hide Menu Items</h3>" );
+			$this->display_menu_items( $user->ID );
+		}
+
 		function save_extra_user_profile_fields( $user_id ) {
-			if ( !current_user_can( 'edit_user', $user_id ) ) { 
-				return false; 
+			if ( !current_user_can( 'edit_user', $user_id ) ) {
+				return false;
 			}
 			update_user_meta( $user_id, 'user_menu', $_POST['user_menu'] );
 			update_user_meta( $user_id, 'user_submenu', $_POST['user_submenu'] );
 			
 		}
-		
+
 	}
-	
+
 	new ORBIT_HIDE_MENU;
