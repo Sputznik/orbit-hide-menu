@@ -10,7 +10,7 @@
     <?php
       _e( $menu_item[0] );
       if( !$submenu && isset( $this->submenu[ $menu_item[2] ] ) && $this->submenu[ $menu_item[2] ] ){
-        $this->list_menu( $this->submenu[ $menu_item[2] ], $user_id_or_role, true );
+        $this->list_menu( $this->submenu[ $menu_item[2] ], $user_id_or_role, $menu_item[2] );
       }
     ?>
   </label>

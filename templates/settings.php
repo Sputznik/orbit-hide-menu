@@ -47,13 +47,13 @@ $active_tab = '';
       $selected_menu = is_array( $_POST['user_menu'] ) ? $_POST['user_menu'] : array();
       $selected_submenu = is_array( $_POST['user_submenu'] ) ? $_POST['user_submenu'] : array();
 
-      //echo "<pre>";
+      echo "<pre>";
       //print_r( $_POST );
       //print_r( $selected_submenu );
-      //echo "</pre>";
+      echo "</pre>";
 
       $this->update_selected_menu_for_role( $active_tab, $selected_menu, $selected_submenu );
-      //_e('<script>location.reload();</script>');
+      _e('<script>location.reload();</script>');
     }
 
   ?>

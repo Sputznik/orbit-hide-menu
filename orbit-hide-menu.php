@@ -49,6 +49,7 @@
 
 		function hide_mainmenu( $menus ){ foreach( $menus as $menu_item ){ remove_menu_page( $menu_item ); } }
 		function hide_submenu( $submenus ){
+			//print_r( $submenus );
 			foreach( $submenus as $submenu_item ){
 				$submenu_item = explode(':', $submenu_item );
 				if( count( $submenu_item ) > 1 ){
@@ -165,7 +166,7 @@
 			}
 			update_user_meta( $user_id, 'user_menu', $_POST['user_menu'] );
 			update_user_meta( $user_id, 'user_submenu', $_POST['user_submenu'] );
-			
+
 		}
 
 	}
