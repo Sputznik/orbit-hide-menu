@@ -44,8 +44,8 @@ $active_tab = '';
 
     if( $_POST ){
 
-      $selected_menu = is_array( $_POST['user_menu'] ) ? $_POST['user_menu'] : array();
-      $selected_submenu = is_array( $_POST['user_submenu'] ) ? $_POST['user_submenu'] : array();
+      $selected_menu = isset( $_POST['user_menu'] ) && is_array( $_POST['user_menu'] ) ? $_POST['user_menu'] : array();
+      $selected_submenu = isset( $_POST['user_submenu'] ) && is_array( $_POST['user_submenu'] ) ? $_POST['user_submenu'] : array();
 
       echo "<pre>";
       //print_r( $_POST );

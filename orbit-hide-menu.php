@@ -164,11 +164,19 @@
 			if ( !current_user_can( 'edit_user', $user_id ) ) {
 				return false;
 			}
+
 			if( isset( $_POST['user_menu'] ) && is_array( $_POST['user_menu'] ) ){
 				update_user_meta( $user_id, 'user_menu', $_POST['user_menu'] );
 			}
+			else{
+				delete_user_meta( $user_id, 'user_menu' );
+			}
+
 			if( isset( $_POST['user_submenu'] ) && is_array( $_POST['user_submenu'] ) ){
 				update_user_meta( $user_id, 'user_submenu', $_POST['user_submenu'] );
+			}
+			else {
+				delete_user_meta( $user_id, 'user_submenu' );
 			}
 		}
 
